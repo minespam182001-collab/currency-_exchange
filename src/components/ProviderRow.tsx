@@ -1,4 +1,6 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
 import StarRating from "./StarRating";
 import { effectiveINR, formatINR, formatUSD, timeAgo } from "@/lib/format";
 import type { RateWithProvider } from "@/lib/supabase";
@@ -8,6 +10,42 @@ interface Props {
   sendUSD: number;
   isBest: boolean;
   rank: number;
+}
+
+function ProviderLogo({ name, logoUrl }: { name: string; logoUrl: string | null }) {
+  const [imgFailed, setImgFailed] = useState(false);
+
+  // Initials badge shown when no logo or image fails to load
+  const initials = name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  if (!logoUrl || imgFailed) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">
+          {initials}
+        </div>
+        <span className="font-semibold text-slate-700 text-sm leading-tight">{name}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={logoUrl}
+        alt={name}
+        className="h-7 w-auto max-w-[72px] object-contain"
+        onError={() => setImgFailed(true)}
+      />
+      <span className="font-semibold text-slate-700 text-sm leading-tight">{name}</span>
+    </div>
+  );
 }
 
 export default function ProviderRow({ entry, sendUSD, isBest, rank }: Props) {
@@ -29,24 +67,13 @@ export default function ProviderRow({ entry, sendUSD, isBest, rank }: Props) {
         </span>
       )}
 
-      {/* Rank + logo */}
-      <div className="flex items-center gap-3 sm:w-44 shrink-0">
-        <span className="text-slate-400 text-sm font-semibold w-5 text-center">{rank}</span>
-        {provider.logo_url ? (
-          <Image
-            src={provider.logo_url}
-            alt={provider.name}
-            width={80}
-            height={32}
-            className="object-contain h-8 w-20"
-            unoptimized
-          />
-        ) : (
-          <span className="font-bold text-slate-700">{provider.name}</span>
-        )}
+      {/* Rank + logo + name */}
+      <div className="flex items-center gap-3 sm:w-48 shrink-0">
+        <span className="text-slate-400 text-sm font-semibold w-5 text-center shrink-0">{rank}</span>
+        <ProviderLogo name={provider.name} logoUrl={provider.logo_url} />
       </div>
 
-      {/* Rate + fee */}
+      {/* Rate + fee + INR + trust */}
       <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
         <div>
           <p className="text-slate-400 text-xs mb-0.5">Exchange rate</p>
