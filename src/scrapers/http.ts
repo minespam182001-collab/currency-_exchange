@@ -9,8 +9,7 @@ import { ScrapeResult } from "./types";
 const BROWSER_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchJSON(url: string, init?: RequestInit): Promise<any> {
+async function fetchJSON(url: string, init?: RequestInit): Promise<any> { // eslint-disable-line
   const res = await fetch(url, {
     ...init,
     headers: {
