@@ -12,38 +12,56 @@ interface Props {
   rank: number;
 }
 
-function ProviderLogo({ name, logoUrl }: { name: string; logoUrl: string | null }) {
-  const [imgFailed, setImgFailed] = useState(false);
+// Brand colors per provider — shown when the logo image fails or is missing
+const BRAND: Record<string, { bg: string; text: string; abbr: string }> = {
+  "Remitly":           { bg: "#333B9E", text: "#fff", abbr: "Re" },
+  "Wise":              { bg: "#163300", text: "#9FE870", abbr: "Wi" },
+  "Western Union":     { bg: "#FFBB00", text: "#1a1a1a", abbr: "WU" },
+  "Xoom":              { bg: "#003087", text: "#fff", abbr: "Xo" },
+  "ICICI Money2India": { bg: "#F37B20", text: "#fff", abbr: "IM" },
+  "Taptap Send":       { bg: "#5B2D8E", text: "#fff", abbr: "TS" },
+};
 
-  // Initials badge shown when no logo or image fails to load
-  const initials = name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+const CLEARBIT = (domain: string) => `https://logo.clearbit.com/${domain}`;
 
-  if (!logoUrl || imgFailed) {
+const LOGO_DOMAINS: Record<string, string> = {
+  "Remitly":           "remitly.com",
+  "Wise":              "wise.com",
+  "Western Union":     "westernunion.com",
+  "Xoom":              "xoom.com",
+  "ICICI Money2India": "money2india.com",
+  "Taptap Send":       "taptapsend.com",
+};
+
+function ProviderAvatar({ name }: { name: string }) {
+  const [failed, setFailed] = useState(false);
+  const brand = BRAND[name] ?? { bg: "#64748b", text: "#fff", abbr: name.slice(0, 2) };
+  const domain = LOGO_DOMAINS[name];
+
+  if (domain && !failed) {
     return (
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">
-          {initials}
-        </div>
-        <span className="font-semibold text-slate-700 text-sm leading-tight">{name}</span>
+      <div
+        className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 overflow-hidden border border-slate-100"
+        style={{ background: brand.bg }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={CLEARBIT(domain)}
+          alt={name}
+          className="w-8 h-8 object-contain"
+          onError={() => setFailed(true)}
+        />
       </div>
     );
   }
 
+  // Branded initials fallback
   return (
-    <div className="flex items-center gap-2">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={logoUrl}
-        alt={name}
-        className="h-7 w-auto max-w-[72px] object-contain"
-        onError={() => setImgFailed(true)}
-      />
-      <span className="font-semibold text-slate-700 text-sm leading-tight">{name}</span>
+    <div
+      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold tracking-tight"
+      style={{ background: brand.bg, color: brand.text }}
+    >
+      {brand.abbr}
     </div>
   );
 }
@@ -67,34 +85,39 @@ export default function ProviderRow({ entry, sendUSD, isBest, rank }: Props) {
         </span>
       )}
 
-      {/* Rank + logo + name */}
-      <div className="flex items-center gap-3 sm:w-48 shrink-0">
-        <span className="text-slate-400 text-sm font-semibold w-5 text-center shrink-0">{rank}</span>
-        <ProviderLogo name={provider.name} logoUrl={provider.logo_url} />
+      {/* Rank + avatar + name */}
+      <div className="flex items-center gap-3 sm:w-52 shrink-0">
+        <span className="text-slate-400 text-sm font-semibold w-4 text-center shrink-0">{rank}</span>
+        <ProviderAvatar name={provider.name} />
+        <div className="min-w-0">
+          <p className="font-semibold text-slate-800 text-sm leading-tight truncate">{provider.name}</p>
+          {is_stale && <p className="text-xs text-amber-500 font-medium">stale data</p>}
+        </div>
       </div>
 
-      {/* Rate + fee + INR + trust */}
+      {/* Data grid */}
       <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
         <div>
           <p className="text-slate-400 text-xs mb-0.5">Exchange rate</p>
           <p className="font-semibold text-slate-800">
-            1 USD = {usd_inr_rate.toFixed(2)} INR
+            {usd_inr_rate.toFixed(2)} <span className="text-slate-400 font-normal text-xs">INR</span>
           </p>
-          {is_stale && (
-            <span className="text-xs text-amber-500 font-medium">stale</span>
-          )}
         </div>
 
         <div>
           <p className="text-slate-400 text-xs mb-0.5">Transfer fee</p>
           <p className="font-semibold text-slate-800">
-            {fee_usd === 0 ? "Variable" : `$${formatUSD(fee_usd)}`}
+            {fee_usd === 0 ? (
+              <span className="text-green-600">Free</span>
+            ) : (
+              `$${formatUSD(fee_usd)}`
+            )}
           </p>
         </div>
 
         <div>
-          <p className="text-slate-400 text-xs mb-0.5">You send ${formatUSD(sendUSD)}</p>
-          <p className={`font-bold text-lg ${isBest ? "text-green-700" : "text-slate-800"}`}>
+          <p className="text-slate-400 text-xs mb-0.5">You receive</p>
+          <p className={`font-bold text-base ${isBest ? "text-green-700" : "text-slate-800"}`}>
             ₹{formatINR(inrReceived)}
           </p>
         </div>
@@ -108,16 +131,16 @@ export default function ProviderRow({ entry, sendUSD, isBest, rank }: Props) {
         </div>
       </div>
 
-      {/* Send now + timestamp */}
-      <div className="flex flex-col items-end gap-2 shrink-0">
+      {/* CTA */}
+      <div className="flex flex-col items-end gap-1.5 shrink-0">
         <a
           href={provider.affiliate_url}
           target="_blank"
           rel="noopener noreferrer"
-          className={`inline-block rounded-lg px-4 py-2 text-sm font-semibold transition-colors
+          className={`inline-block rounded-lg px-4 py-2 text-sm font-semibold transition-colors whitespace-nowrap
             ${isBest
               ? "bg-green-500 text-white hover:bg-green-600"
-              : "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-slate-800 text-white hover:bg-slate-700"
             }`}
         >
           Send now ↗
