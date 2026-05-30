@@ -32,7 +32,7 @@ export interface Rate {
   fee_usd: number;
   scraped_at: string;
   is_stale: boolean;
-  is_estimated: boolean;
+  is_estimated?: boolean; // injected at API layer, not stored in DB
 }
 
 export interface RateWithProvider extends Rate {

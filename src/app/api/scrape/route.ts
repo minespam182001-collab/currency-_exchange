@@ -48,7 +48,6 @@ export async function POST(req: NextRequest) {
         fee_usd: r.fee_usd,
         scraped_at: new Date().toISOString(),
         is_stale: false,
-        is_estimated: r.is_estimated ?? false,
       });
     }
 
