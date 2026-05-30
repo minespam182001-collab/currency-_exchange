@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 export const dynamic = "force-dynamic";
 
 // Providers whose scrapers return live data (not estimated)
-const LIVE_PROVIDERS = new Set<string>(["Taptap Send"]);
+const LIVE_PROVIDERS = new Set<string>(["Taptap Send", "Wise", "Remitly", "ICICI Money2India"]);
 
 export async function GET() {
   const db = supabaseAdmin();

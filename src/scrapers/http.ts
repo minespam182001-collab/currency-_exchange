@@ -9,7 +9,8 @@ import { ScrapeResult } from "./types";
 const BROWSER_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-async function fetchJSON(url: string, init?: RequestInit) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchJSON(url: string, init?: RequestInit): Promise<any> {
   const res = await fetch(url, {
     ...init,
     headers: {
@@ -25,40 +26,34 @@ async function fetchJSON(url: string, init?: RequestInit) {
 }
 
 // ─── Wise ───────────────────────────────────────────────────────────────────
-// Wise uses mid-market rate. Their public rates endpoint works without auth.
+// Wise publishes their live mid-market rate via a public history endpoint.
+// They charge a fee (flat + %) rather than a spread on the rate itself.
 export async function httpWise(): Promise<ScrapeResult> {
   try {
-    // Primary: public rates API
     const data = await fetchJSON(
-      "https://api.wise.com/v1/rates?source=USD&target=INR"
+      "https://wise.com/rates/history+live?source=USD&target=INR&length=1&resolution=hourly&unit=day",
+      { headers: { Referer: "https://wise.com/" } }
     );
-    const rate = Array.isArray(data) ? data[0]?.rate : data?.rate;
+    // Returns array [{source, target, value, time}] — take the last (most recent) entry
+    const entries = Array.isArray(data) ? data : [];
+    const latest = entries[entries.length - 1];
+    const rate = latest?.value;
     if (rate && rate > 50) {
       return { providerName: "Wise", usd_inr_rate: parseFloat(rate), fee_usd: 2.30, success: true };
     }
-    throw new Error("No rate in response");
+    throw new Error("No rate value in Wise history+live response");
   } catch (err) {
-    // Fallback: scrape their compare page rate via their calculator API
-    try {
-      const data = await fetchJSON(
-        "https://api.wise.com/v2/rates/history/live?source=USD&target=INR&length=1",
-        { headers: { "Accept": "application/json" } }
-      );
-      const rate = data?.value ?? data?.rate ?? data?.[0]?.value;
-      if (rate && rate > 50) {
-        return { providerName: "Wise", usd_inr_rate: parseFloat(rate), fee_usd: 2.30, success: true };
-      }
-    } catch {}
     return { providerName: "Wise", usd_inr_rate: 0, fee_usd: 0, success: false, error: String(err) };
   }
 }
 
 // ─── Remitly ────────────────────────────────────────────────────────────────
-// Remitly's calculator calls their pricing estimate endpoint.
+// Remitly's calculator uses a public v3 estimate endpoint (no auth needed).
+// Shape: { estimate: { exchange_rate: { base_rate: "94.61" }, fee: { total_fee_amount: "0.00" } } }
 export async function httpRemitly(): Promise<ScrapeResult> {
   try {
     const data = await fetchJSON(
-      "https://api.remitly.io/v2/calculator/estimate?anchor=SEND&sendAmount=1000&sendCurrency=USD&receiveCurrency=INR&deliveryMethod=BANK_DEPOSIT",
+      "https://api.remitly.io/v3/calculator/estimate?conduit=USA%3AUSD-IND%3AINR&anchor=SEND&amount=1000&purpose=OTHER&customer_segment=STANDARD&customer_recognition=UNRECOGNIZED&strict_promo=false",
       {
         headers: {
           Origin: "https://www.remitly.com",
@@ -66,17 +61,9 @@ export async function httpRemitly(): Promise<ScrapeResult> {
         },
       }
     );
-    // Shape: { data: { exchange_rate, fee: { amount } } }
-    const rate =
-      data?.data?.exchange_rate ??
-      data?.exchange_rate ??
-      data?.rate;
-    const fee =
-      data?.data?.fee?.amount ??
-      data?.fee?.amount ??
-      data?.fee ??
-      0;
-    if (rate && rate > 50) {
+    const rate = data?.estimate?.exchange_rate?.base_rate;
+    const fee = data?.estimate?.fee?.total_fee_amount ?? "0";
+    if (rate && parseFloat(rate) > 50) {
       return {
         providerName: "Remitly",
         usd_inr_rate: parseFloat(rate),
@@ -84,7 +71,7 @@ export async function httpRemitly(): Promise<ScrapeResult> {
         success: true,
       };
     }
-    throw new Error("No rate in Remitly response");
+    throw new Error("No rate in Remitly v3 response");
   } catch (err) {
     return { providerName: "Remitly", usd_inr_rate: 0, fee_usd: 0, success: false, error: String(err) };
   }
