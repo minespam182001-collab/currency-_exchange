@@ -1,4 +1,5 @@
 import StarRating from "./StarRating";
+import ProviderLogo from "./ProviderLogo";
 import { effectiveINR, formatINR, formatUSD, timeAgo } from "@/lib/format";
 import type { RateWithProvider } from "@/lib/supabase";
 
@@ -7,27 +8,6 @@ interface Props {
   sendUSD: number;
   isBest: boolean;
   rank: number;
-}
-
-const BRAND: Record<string, { bg: string; text: string; abbr: string }> = {
-  "Remitly":           { bg: "#333B9E", text: "#fff",    abbr: "Re" },
-  "Wise":              { bg: "#163300", text: "#9FE870", abbr: "Wi" },
-  "Western Union":     { bg: "#FFBB00", text: "#1a1a1a", abbr: "WU" },
-  "Xoom":              { bg: "#003087", text: "#fff",    abbr: "Xo" },
-  "ICICI Money2India": { bg: "#F37B20", text: "#fff",    abbr: "IM" },
-  "Taptap Send":       { bg: "#5B2D8E", text: "#fff",    abbr: "TS" },
-};
-
-function ProviderAvatar({ name }: { name: string }) {
-  const brand = BRAND[name] ?? { bg: "#64748b", text: "#fff", abbr: name.slice(0, 2).toUpperCase() };
-  return (
-    <div
-      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold tracking-tight select-none"
-      style={{ background: brand.bg, color: brand.text }}
-    >
-      {brand.abbr}
-    </div>
-  );
 }
 
 export default function ProviderRow({ entry, sendUSD, isBest, rank }: Props) {
@@ -52,7 +32,7 @@ export default function ProviderRow({ entry, sendUSD, isBest, rank }: Props) {
       {/* Rank + avatar + name */}
       <div className="flex items-center gap-3 sm:w-52 shrink-0">
         <span className="text-slate-400 text-sm font-semibold w-4 text-center shrink-0">{rank}</span>
-        <ProviderAvatar name={provider.name} />
+        <ProviderLogo name={provider.name} logoUrl={provider.logo_url} />
         <div className="min-w-0">
           <p className="font-semibold text-slate-800 text-sm leading-tight truncate">{provider.name}</p>
           {is_stale ? (
